@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import requests, glob, zipfile, csv, io, os, pickle, gzip
 import numpy as np
-import zipfile
-
-# Kromě vestavěných knihoven (os, sys, re, requests …) byste si měli vystačit s: gzip, pickle, csv, zipfile, numpy, matplotlib, BeautifulSoup.
-# Další knihovny je možné použít po schválení opravujícím (např ve fóru WIS).
-import requests
 import regex as re
+
 from bs4 import BeautifulSoup
-import glob, zipfile
-import csv
-import io
-import os
+
 
 def int_validator(value, invalid_value=-1):
     try:
@@ -26,8 +20,10 @@ def float_validator(value, invalid_value=float("NaN")):
     except ValueError:
         return invalid_value
 
+
 def string_validator(value):
     return str(value.encode("utf-8"))
+
 
 class DataDownloader:
     """ TODO: dokumentacni retezce
@@ -37,6 +33,7 @@ class DataDownloader:
         regions     Dictionary s nazvy kraju : nazev csv souboru
     """
 
+    # TODO lépe pořešit validátory a zakomponovat do nich rozsahy
     headers = [
         ("p1", np.int64, int_validator),
         ("p36", np.int8, int_validator),
@@ -121,7 +118,10 @@ class DataDownloader:
         "KVK": "19",
     }
 
-    def __init__(self, url="https://ehw.fit.vutbr.cz/izv/", folder="data", cache_filename="data_{}.pkl.gz"):
+    mem_cache = {}
+
+    def __init__(self, url="https://ehw.fit.vutbr.cz/izv/", folder="data",
+                 cache_filename="data_{}.pkl.gz"):
         self.url = url
         self.folder = folder
         self.cache_filename = cache_filename
@@ -135,27 +135,37 @@ class DataDownloader:
         page = BeautifulSoup(r.content, features="lxml")
         [x.parent.decompose() for x in page.find_all(string="neexistuje")]
         last_buttons = page.select("td:last-of-type button")
-        links = [self.url + re.search("'([^']*)'", button.get('onclick'))[1] for button in last_buttons]
+        links = [self.url + re.search("'([^']*)'", button.get('onclick'))[1]
+                 for button in last_buttons]
         for link in links:
-            with requests.get(link) as r:
-                with open(self.folder + "/" + link.split('/')[-1], "wb") as f:
-                    f.write(r.content)
+            file_path = self.folder + "/" + link.split('/')[-1]
+            if not os.path.isfile(file_path):
+                with requests.get(link) as r:
+                    with open(file_path, "wb") as f:
+                        f.write(r.content)
 
     def parse_region_data(self, region):
+        # todo resolve duplicates
         region_id = self.regions[region]
         result = {header[0] : [] for header in self.headers}
 
-        # TODO zkusit jednou download_data pokud v zipech nic nenajdu
-        for archive in glob.glob(f"{self.folder}/*.zip"):
-                with zipfile.ZipFile(archive, "r") as zf:
-                    with zf.open(region_id + ".csv", "r") as f:
-                        reader = csv.reader(io.TextIOWrapper(f, encoding="cp1250"), delimiter=";")
-                        for row in reader:
-                            for header, record in zip(self.headers, row):
-                                if header[2]:
-                                    result[header[0]].append(header[2](record))
-                                else:
-                                    result[header[0]].append(record)
+        # TODO make this more elegant
+        for _ in range(2):
+            for archive in glob.glob(f"{self.folder}/*.zip"):
+                    with zipfile.ZipFile(archive, "r") as zf:
+                        with zf.open(region_id + ".csv", "r") as f:
+                            reader = csv.reader(io.TextIOWrapper(f, encoding="cp1250"),
+                                                delimiter=";", quotechar='"')
+                            for row in reader:
+                                for header, record in zip(self.headers, row):
+                                    if header[2]:
+                                        result[header[0]].append(header[2](record))
+                                    else:
+                                        result[header[0]].append(record)
+            if result[self.headers[0][0]].size > 0:
+                break
+            else:
+                self.download_data()
 
         for header in self.headers:
             result[header[0]] = np.array(result[header[0]], dtype=header[1])
@@ -163,9 +173,39 @@ class DataDownloader:
         return result
 
     def get_dict(self, regions=None):
-        pass
+        regions = regions if regions else self.regions
+        colls = {header[0] : [] for header in self.headers}
+        # TODO add region header more inteligently
+        colls["region"] = []
+        for region in regions:
+            # obtain data
+            try:
+                # check mem cache
+                region_data = self.mem_cache[region]
+            except KeyError:
+                cache_filename = self.cache_filename.format(region)
+                # check file cache
+                try:
+                    with gzip.open(cache_filename, "rb") as f:
+                        region_data = pickle.load(f)
+                except FileNotFoundError:
+                    region_data = self.parse_region_data(region)
+                    # store in file cache
+                    with gzip.open(cache_filename, "wb") as f:
+                        pickle.dump(region_data, f)
+                    #  store in mem
+                    self.mem_cache[region] = region_data
 
-# TODO vypsat zakladni informace pri spusteni python3 download.py (ne pri importu modulu)
-a = DataDownloader()
-#a.download_data()
-a.parse_region_data("PHA")
+            for coll_key in colls.keys():
+                colls[coll_key].append(region_data[coll_key])
+        for coll_key in colls.keys():
+            colls[coll_key] = np.concatenate(colls[coll_key])
+        return colls
+
+
+if __name__ == "__main__":
+    # TODO výpis základních informací
+    a = DataDownloader()
+    all_regions = a.get_dict(["KVK"])
+    for (key, value) in all_regions.items():
+        print(f"{key} : {value.shape}")
