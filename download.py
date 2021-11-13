@@ -7,22 +7,26 @@ import regex as re
 from bs4 import BeautifulSoup
 
 
-def int_validator(value, invalid_value=-1):
+def int_validator(val, ranges=None, invalid_value=-1):
     try:
-        return int(value)
+        int_val = int(val)
     except ValueError:
         return invalid_value
+
+    if not ranges:
+        return int_val
+
+    for (left, right) in ranges:
+        if left <= int_val <= right:
+            return int_val
+    return invalid_value
 
 
 def float_validator(value, invalid_value=float("NaN")):
     try:
-        return float(value)
+        return float(value.replace(',', '.'))
     except ValueError:
         return invalid_value
-
-
-def string_validator(value):
-    return str(value.encode("utf-8"))
 
 
 class DataDownloader:
@@ -32,73 +36,74 @@ class DataDownloader:
         headers    Nazvy hlavicek jednotlivych CSV souboru, tyto nazvy nemente!
         regions     Dictionary s nazvy kraju : nazev csv souboru
     """
-
     # TODO lépe pořešit validátory a zakomponovat do nich rozsahy
     headers = [
-        ("p1", np.int64, int_validator),
-        ("p36", np.int8, int_validator),
-        ("p37", np.int64, int_validator),
-        ("p2a", np.datetime64, None),
-        ("weekday(p2a)", np.int8, int_validator),
-        ("p2b", np.string_, string_validator),
-        ("p6", np.int8, int_validator),
-        ("p7", np.int8, int_validator),
-        ("p8", np.int8, int_validator),
-        ("p9", np.int8, int_validator),
-        ("p10", np.int8, int_validator),
-        ("p11", np.int8, int_validator),
-        ("p12", np.int16, int_validator),
-        ("p13a", np.int64, int_validator),
-        ("p13b", np.int64, int_validator),
-        ("p13c", np.int64, int_validator),
-        ("p14", np.int64, int_validator),
-        ("p15", np.int8, int_validator),
-        ("p16", np.int8, int_validator),
-        ("p17", np.int8, int_validator),
-        ("p18", np.int8, int_validator),
-        ("p19", np.int8, int_validator),
-        ("p20", np.int8, int_validator),
-        ("p21", np.int8, int_validator),
-        ("p22", np.int8, int_validator),
-        ("p23", np.int8, int_validator),
-        ("p24", np.int8, int_validator),
-        ("p27", np.int8, int_validator),
-        ("p28", np.int8, int_validator),
-        ("p34", np.int64, int_validator),
-        ("p35", np.int8, int_validator),
-        ("p39", np.int8, int_validator),
-        ("p44", np.int8, int_validator),
-        ("p45a", np.int8, int_validator),
-        ("p47", np.int64, int_validator),
-        ("p48a", np.int8, int_validator),
-        ("p49", np.int8, int_validator),
-        ("p50a", np.int8, int_validator),
-        ("p50b", np.int8, int_validator),
-        ("p51", np.int8, int_validator),
-        ("p52", np.int8, int_validator),
-        ("p53", np.int64, int_validator),
-        ("p55a", np.int8, int_validator),
-        ("p57", np.int8, int_validator),
-        ("p58", np.int8, int_validator),
-        ("a", np.double, float_validator),
-        ("b", np.double, float_validator),
-        ("d", np.double, float_validator),
-        ("e", np.double, float_validator),
-        ("f", np.double, float_validator),
-        ("g", np.double, float_validator),
-        ("h", np.string_, string_validator),
-        ("i", np.string_, string_validator),
-        ("j", np.object_, None),
-        ("k", np.string_, string_validator),
-        ("l", np.string_, string_validator),
-        ("n", np.int64, int_validator),
-        ("o", np.object_, None),
-        ("p", np.string_, string_validator),
-        ("q", np.string_, string_validator),
-        ("r", np.int64, int_validator),
-        ("s", np.int64, int_validator),
-        ("t", np.string_, string_validator),
-        ("p5a", np.int8, int_validator)
+        ("p1", "i8", int_validator), # TODO
+        ("p36", "i1", lambda v: int_validator(v, [(0, 8)])),
+        ("p37", "i8", lambda v: 0 if v.strip() == ""
+            else int_validator(v, [(0, 99), (101, 999), (1000, 999999)])),
+        ("p2a", np.datetime64, None), # TODO
+        ("weekday(p2a)", "i1", lambda v: int_validator(v, [(0, 6)])),
+        ("p2b", "U", None),
+        ("p6", "i1", lambda v: int_validator(v, [(0, 9)])),
+        ("p7", "i1", lambda v: int_validator(v, [(0, 4)])),
+        ("p8", "i1", lambda v: int_validator(v, [(0, 9)])),
+        ("p9", "i1", lambda v: int_validator(v, [(1, 2)])),
+        ("p10", "i1", lambda v: int_validator(v, [(0, 7)])),
+        ("p11", "i1", lambda v: int_validator(v, [(0, 9)])),
+        ("p12", "i2", lambda v: int_validator(v, [(100, 100), (301, 311), (401, 414),
+                                                  (501, 516), (601, 615)])),
+        ("p13a", "i8", int_validator),
+        ("p13b", "i8", int_validator),
+        ("p13c", "i8", int_validator), # TODO uint checks
+        ("p14", "i8", int_validator),
+        ("p15", "i1", lambda v: int_validator(v, [(1, 6)])),
+        ("p16", "i1", lambda v: int_validator(v, [(0, 9)])),
+        ("p17", "i1", lambda v: int_validator(v, [(1, 12)])),
+        ("p18", "i1", lambda v: int_validator(v, [(0, 7)])),
+        ("p19", "i1", lambda v: int_validator(v, [(1, 7)])),
+        ("p20", "i1", lambda v: int_validator(v, [(0, 6)])),
+        ("p21", "i1", lambda v: int_validator(v, [(0, 6)])),
+        ("p22", "i1", lambda v: int_validator(v, [(0, 9)])),
+        ("p23", "i1", lambda v: int_validator(v, [(0, 3)])),
+        ("p24", "i1", lambda v: 0 if v.strip() == "" else int_validator(v, [(0, 5)])),
+        ("p27", "i1", lambda v: int_validator(v, [(0, 10)])),
+        ("p28", "i1", lambda v: int_validator(v, [(1, 7)])),
+        ("p34", "i8", int_validator), # TODO uint checks
+        ("p35", "i1", lambda v: int_validator(v, [(0, 0), (10, 19), (22, 29)])),
+        ("p39", "i1", lambda v: int_validator(v, [(1, 9)])),
+        ("p44", "i1", lambda v: int_validator(v, [(0, 18)])),
+        ("p45a", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 99)])),
+        ("p47", "i8", lambda v: -2 if v.strip() == "XX" else int_validator(v)),
+        ("p48a", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 18)])),
+        ("p49", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 1)])),
+        ("p50a", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 4)])),
+        ("p50b", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 4)])),
+        ("p51", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(1, 3)])),
+        ("p52", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(1, 6), (10, 99)])),
+        ("p53", "i8", int_validator),
+        ("p55a", "i1", lambda v: int_validator(v, [(0, 9)])),
+        ("p57", "i1", lambda v: int_validator(v, [(0, 9)])),
+        ("p58", "i1", lambda v: int_validator(v, [(0, 5)])),
+        ("a", "d", float_validator),
+        ("b", "d", float_validator),
+        ("d", "d", float_validator),
+        ("e", "d", float_validator),
+        ("f", "d", float_validator),
+        ("g", "d", float_validator),
+        ("h", "U", None),
+        ("i", "U", None),
+        ("j", "U", None),
+        ("k", "U", None),
+        ("l", "U", None),
+        ("n", "i8", lambda v: -2 if v.strip() == "" else int_validator(v)),
+        ("o", "U", None),
+        ("p", "U", None),
+        ("q", "U", None),
+        ("r", "i8", lambda v: -2 if v.strip() == "" else int_validator(v)),
+        ("s", "i8", lambda v: -2 if v.strip() == "" else int_validator(v)),
+        ("t", "U", None),
+        ("p5a", "i1", lambda v: int_validator(v, [(0, 1)])),
     ]
 
     regions = {
@@ -119,16 +124,13 @@ class DataDownloader:
     }
 
     mem_cache = {}
-
+    # TODO cache path/position
     def __init__(self, url="https://ehw.fit.vutbr.cz/izv/", folder="data",
                  cache_filename="data_{}.pkl.gz"):
         self.url = url
         self.folder = folder
         self.cache_filename = cache_filename
-        try:
-            os.makedirs(folder)
-        except FileExistsError:
-            pass
+        os.makedirs(folder, exist_ok=True)
 
     def download_data(self):
         r = requests.get(self.url)
@@ -162,7 +164,7 @@ class DataDownloader:
                                         result[header[0]].append(header[2](record))
                                     else:
                                         result[header[0]].append(record)
-            if result[self.headers[0][0]].size > 0:
+            if len(result[self.headers[0][0]]) > 0:
                 break
             else:
                 self.download_data()
@@ -173,7 +175,7 @@ class DataDownloader:
         return result
 
     def get_dict(self, regions=None):
-        regions = regions if regions else self.regions
+        regions = regions if regions else self.regions.keys()
         colls = {header[0] : [] for header in self.headers}
         # TODO add region header more inteligently
         colls["region"] = []
@@ -206,6 +208,8 @@ class DataDownloader:
 if __name__ == "__main__":
     # TODO výpis základních informací
     a = DataDownloader()
-    all_regions = a.get_dict(["KVK"])
+    all_regions = a.get_dict([])
     for (key, value) in all_regions.items():
-        print(f"{key} : {value.shape}")
+        print(f"key: {key}, value:{value[0]}")
+    print(a.headers[2][2]("101"))
+    # print(int_validator("2100200753"))
