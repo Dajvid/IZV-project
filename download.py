@@ -14,17 +14,25 @@ from bs4 import BeautifulSoup
 
 
 def int_validator(val, ranges=None, invalid_value=-1):
-    """Validate and convert integer like values.
+    """Validate and convert integer like value.
 
     Parameters
     ----------
-    val
-    ranges
-    invalid_value
-
+    val : Int_like
+        Value to convert and validate.
+    ranges : Iterable, optional
+        Iterable containing tuples specifying allowed ranges.
+        Ranges are inclusive from both sides so for example tuple
+        (4, 8) represents interval <4, 8>. To allow single value,
+        tuple (a, a) can be used to allow value a. When not specified,
+        range of values is not limited.
+    invalid_value : Int, optional
+        Value returned when val can't be converted to Int or when it's out
+        of specified range.
     Returns
     -------
-
+    Converted and validated value. When value can't be converted or is not valid,
+    returns invalid_value.
     """
     try:
         int_val = int(val)
@@ -40,31 +48,49 @@ def int_validator(val, ranges=None, invalid_value=-1):
     return invalid_value
 
 
-def float_validator(value, invalid_value=float("NaN")):
-    """Validate and convert float like values.
+def float_validator(val, invalid_value=float("NaN")):
+    """Convert float like value.
 
     Parameters
     ----------
-    value
-    invalid_value
-
+    val : float_like
+        Value to convert and validate.
+    invalid_value : Float, optional
+        Value returned when val can't be converted to FP.
     Returns
     -------
-
+    Converted value. When value can't be converted, returns invalid_value.
     """
     try:
-        return float(value.replace(',', '.'))
+        return float(val.replace(',', '.'))
     except ValueError:
         return invalid_value
 
+#    Attributes:
+#         headers    Nazvy hlavicek jednotlivych CSV souboru, tyto nazvy nemente!
+#         regions     Dictionary s nazvy kraju : nazev csv souboru
+
 
 class DataDownloader:
-    """ TODO: dokumentacni retezce
+    """Handle download and processing of accident statistics dataset provided by PČR.
 
-    Attributes:
-        headers    Nazvy hlavicek jednotlivych CSV souboru, tyto nazvy nemente!
-        regions     Dictionary s nazvy kraju : nazev csv souboru
+    Attributes
+    ----------
+    headers List of headers for individual fields in CSV data files.
+        Each header is stored as tuple. Where first value is string representing name
+        of that header. Second value is numpy data type later used for given fields.
+        And third value is lambda expression for conversion and validation of that given
+        field, if any.
+    regions Dictionary with {region name : CSV_data_file name}
+
+    Methods
+    -------
+    __init__ Initializer which sets needed instance attributes on instance creation.
+    download_data Method to download latest dataset from url specified in initializator.
+    parse_region_data Method to parse data for specified region.
+    get_dict Method to obtain dataset for specified regions.
     """
+
     headers = [
         ("p1", "i8", int_validator), # TODO
         ("p36", "i1", lambda v: int_validator(v, [(0, 8)])),
@@ -154,14 +180,27 @@ class DataDownloader:
 
     def __init__(self, url="https://ehw.fit.vutbr.cz/izv/", folder="data",
                  cache_filename="data_{}.pkl.gz"):
+        """Initializer which sets needed instance attributes on instance creation.
+
+        Parameters
+        ----------
+        url : String, optional
+            URL specifying address where dataset can be downloaded.
+        folder : String, optional
+            Path to folder where temporary data will be stored. Is created when
+            it doesn't exist.
+        cache_filename : String, optional
+            String template specifying name of cache files stored in folder.
+            Only *.pkl.gz formats are supported.
+        """
         self.url = url
         self.folder = os.path.realpath(os.path.relpath(folder))
         self.cache_filename = os.path.join(self.folder, cache_filename)
         self.mem_cache = {}
-
         os.makedirs(folder, exist_ok=True)
 
     def download_data(self):
+        """Method to download latest dataset version."""
         r = requests.get(self.url)
         page = BeautifulSoup(r.content, features="lxml")
         [x.parent.decompose() for x in page.find_all(string="neexistuje")]
@@ -176,6 +215,17 @@ class DataDownloader:
                         f.write(r.content)
 
     def parse_region_data(self, region):
+        """Method to parse data for specified region.
+
+        Parameters
+        ----------
+        region : String
+            Shortname of region that should be parsed.
+
+        Returns
+        -------
+        Dictionary with headers as key and ndarray as value {header : ndarray}
+        """
         region_id = self.regions[region]
         result = {header[0]: [] for header in self.headers}
         used_ids = {}
@@ -209,6 +259,20 @@ class DataDownloader:
         return result
 
     def get_dict(self, regions=None):
+        """Method to obtain dataset for specified regions.
+
+        Parsed data of individual regions is cached and parse_region_data is
+        used only when desired region is not found in the cache.
+        Parameters
+        ----------
+        regions : Iterable, optional
+            Iterable holding shortnames of regions to include in prepared dataset.
+            When empty or None, all regions are included.
+        Returns
+        -------
+             Dictionary with headers as key and ndarray as value {header : ndarray}
+             Similarly to parse_region_data, but
+        """
         regions = regions if regions else self.regions.keys()
         colls = {header[0] : [] for header in self.headers + [("region",)]}
         for region in regions:
@@ -238,6 +302,7 @@ class DataDownloader:
 
 
 if __name__ == "__main__":
+    # Example with PHA, JHM and OLK regions
     example_regions = ["PHA", "JHM", "OLK"]
     example_data = DataDownloader().get_dict(example_regions)
     print("Sloupce:")

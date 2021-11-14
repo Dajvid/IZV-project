@@ -10,6 +10,18 @@ from download import DataDownloader
 
 
 def plot_stat(data_source, fig_location=None, show_figure=False):
+    """Plot absolute and relative statistics of accidents and causes across regions.
+
+    Parameters
+    ----------
+    data_source : Dictionary with data in format produced by DataDownloader.get_dict
+    fig_location : String, optional
+        Path to store resulting plot, including filename and format extension.
+        If not specified, figure is not saved.
+    show_figure : Bool, optional
+        When set to True, resulting figure is also shown on the screen. If not
+        specified default value is False, and hence figure is not shown on the screen.
+    """
     # prepare data
     regs, reg_ind, reg_counts = np.unique(data_source["region"], return_index=True,
                                           return_counts=True)
@@ -62,6 +74,15 @@ def plot_stat(data_source, fig_location=None, show_figure=False):
 
 
 def main(argv=None):
+    """Main function
+
+    Parameters
+    ----------
+    argv Argument vector passed to the ArgumentParser.
+    Following arguments are defined and can be passed from command line:
+        --fig_location : Defines location of resulting plots..
+        --show_figure : Show the plot when it's created.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--fig_location",
