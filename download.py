@@ -103,7 +103,7 @@ class DataDownloader:
     Methods
     -------
     __init__ Initializer which sets needed instance attributes on instance creation.
-    download_data Method to download latest dataset from url specified in initializator.
+    download_data Method to download latest dataset from url specified in initializer.
     parse_region_data Method to parse data for specified region.
     get_dict Method to obtain dataset for specified regions.
     """
@@ -144,15 +144,17 @@ class DataDownloader:
         ("p35", "i1", lambda v: int_validator(v, [(0, 0), (10, 19), (22, 29)])),
         ("p39", "i1", lambda v: int_validator(v, [(1, 9)])),
         ("p44", "i1", lambda v: int_validator(v, [(0, 18)])),
-        ("p45a", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 99)])),
+        ("p45a", "i1",
+         lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 99)])),
         ("p47", "i8", lambda v: -2 if v.strip() == "XX" else int_validator(v)),
-        ("p48a", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 18)])),
+        ("p48a", "i1",
+         lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 18)])),
         ("p49", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 1)])),
         ("p50a", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 4)])),
         ("p50b", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(0, 4)])),
         ("p51", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(1, 3)])),
-        ("p52", "i1", lambda v: -2 if v.strip() == "" else int_validator(v, [(1, 6),
-                                                                             (10, 99)])),
+        ("p52", "i1",
+         lambda v: -2 if v.strip() == "" else int_validator(v, [(1, 6), (10, 99)])),
         ("p53", "i8", int_validator),
         ("p55a", "i1", lambda v: int_validator(v, [(0, 9)])),
         ("p57", "i1", lambda v: int_validator(v, [(0, 9)])),
@@ -271,7 +273,7 @@ class DataDownloader:
         # create numpy array from lists representing data columns
         for header in self.headers:
             result[header[0]] = np.array(result[header[0]], dtype=header[1])
-        # and add region "collumn"
+        # and add region "column"
         result["region"] = np.repeat(region, result[self.headers[0][0]].size)
         return result
 
@@ -291,7 +293,7 @@ class DataDownloader:
              Similarly to parse_region_data, but
         """
         regions = regions if regions else self.regions.keys()
-        colls = {header[0] : [] for header in self.headers + [("region",)]}
+        cols = {header[0]: [] for header in self.headers + [("region",)]}
         for region in regions:
             # obtain data
             try:
@@ -304,18 +306,26 @@ class DataDownloader:
                     with gzip.open(cache_filename, "rb") as f:
                         region_data = pickle.load(f)
                 except FileNotFoundError:
+                    # Not found in cache, parse it
                     region_data = self.parse_region_data(region)
                     # store in file cache
-                    with gzip.open(cache_filename, "wb") as f:
+                    # I chose compresslevel=8 because from my testing on given dataset
+                    # of interest default (level 9) compared to level 8 only compressed
+                    # by additional ~0.63 % but took twice as long to compute. I also
+                    # tested lower levels, but after level 8 loss on compression was
+                    # substantial from my point of view (>2 %) and outweighed the
+                    # longer computation time. PS Decompression time deltas were
+                    # almost same, so I'm not even mentioning them here...
+                    with gzip.open(cache_filename, "wb", compresslevel=8) as f:
                         pickle.dump(region_data, f)
-                    #  store in mem
+                    #  store in mem cache
                     self.mem_cache[region] = region_data
 
-            for coll_key in colls.keys():
-                colls[coll_key].append(region_data[coll_key])
-        for coll_key in colls.keys():
-            colls[coll_key] = np.concatenate(colls[coll_key])
-        return colls
+            for coll_key in cols.keys():
+                cols[coll_key].append(region_data[coll_key])
+        for coll_key in cols.keys():
+            cols[coll_key] = np.concatenate(cols[coll_key])
+        return cols
 
 
 if __name__ == "__main__":
@@ -323,8 +333,8 @@ if __name__ == "__main__":
     example_regions = ["PHA", "JHM", "OLK"]
     example_data = DataDownloader().get_dict(example_regions)
     print("Sloupce:")
-    for header, col in example_data.items():
-        print(" "*4 + f"{header}, počet položek: {len(col)}")
+    for hdr, col in example_data.items():
+        print(" " * 4 + f"{hdr}, počet položek: {len(col)}")
     print(f"Kraje:")
-    for region in example_regions:
-        print(" "*4 + f"{region}")
+    for reg in example_regions:
+        print(" " * 4 + f"{reg}")

@@ -10,7 +10,7 @@ from download import DataDownloader
 
 
 def plot_stat(data_source, fig_location=None, show_figure=False):
-    """Plot absolute and relative statistics of accidents and causes across regions.
+    """Plot statistics of absolute and relative accidents and causes across regions.
 
     Parameters
     ----------
