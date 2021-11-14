@@ -120,6 +120,8 @@ class DataDownloader:
             else int_validator(v, [(0, 99), (101, 999), (1000, 999999)])),
         ("p2a", 'datetime64[D]', date_validator),
         ("weekday(p2a)", "i1", lambda v: int_validator(v, [(0, 6)])),
+        # Change format of p2b depending on a future usecase of this field. For now
+        # storing it as i2 should preserve all needed data including unknown m/h (60/25)
         ("p2b", "i2", int_validator),
         ("p6", "i1", lambda v: int_validator(v, [(0, 9)])),
         ("p7", "i1", lambda v: int_validator(v, [(0, 4)])),
