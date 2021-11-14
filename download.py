@@ -54,7 +54,7 @@ def float_validator(val, invalid_value=float("NaN")):
     Parameters
     ----------
     val : float_like
-        Value to convert and validate.
+        Value to convert.
     invalid_value : Float, optional
         Value returned when val can't be converted to FP.
     Returns
@@ -66,9 +66,26 @@ def float_validator(val, invalid_value=float("NaN")):
     except ValueError:
         return invalid_value
 
-#    Attributes:
-#         headers    Nazvy hlavicek jednotlivych CSV souboru, tyto nazvy nemente!
-#         regions     Dictionary s nazvy kraju : nazev csv souboru
+
+def date_validator(val, invalid_value=np.datetime64('nat')):
+    """Convert date value.
+
+    Parameters
+    ----------
+    val : date like
+        Value to convert.
+    invalid_value : datetime64, optional
+        Value to use as a fill for invalid entries.
+        datetime64('nat') [not a time] from numpy is used as default fill value.
+
+    Returns
+    -------
+    Converted value. When value can't be converted, returns invalid_value.
+    """
+    try:
+        return np.datetime64(val)
+    except ValueError:
+        return invalid_value
 
 
 class DataDownloader:
@@ -92,13 +109,13 @@ class DataDownloader:
     """
 
     headers = [
-        ("p1", "i8", int_validator), # TODO
+        ("p1", "i8", int_validator),
         ("p36", "i1", lambda v: int_validator(v, [(0, 8)])),
         ("p37", "i8", lambda v: 0 if v.strip() == ""
             else int_validator(v, [(0, 99), (101, 999), (1000, 999999)])),
-        ("p2a", np.datetime64, None), # TODO
+        ("p2a", 'datetime64[D]', date_validator),
         ("weekday(p2a)", "i1", lambda v: int_validator(v, [(0, 6)])),
-        ("p2b", "U", None), # TODO
+        ("p2b", "i2", int_validator),
         ("p6", "i1", lambda v: int_validator(v, [(0, 9)])),
         ("p7", "i1", lambda v: int_validator(v, [(0, 4)])),
         ("p8", "i1", lambda v: int_validator(v, [(0, 9)])),
@@ -311,4 +328,3 @@ if __name__ == "__main__":
     print(f"Kraje:")
     for region in example_regions:
         print(" "*4 + f"{region}")
-
