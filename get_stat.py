@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
-import numpy as np
-import matplotlib.pyplot as plt
 import argparse
 import os
+import matplotlib.pyplot as plt
+import numpy as np
 
 from matplotlib.colors import LogNorm
 from download import DataDownloader
@@ -12,13 +11,11 @@ from download import DataDownloader
 
 def plot_stat(data_source, fig_location=None, show_figure=False):
     # prepare data
-    regions, starting_indexes, regions_counts = np.unique(data_source["region"],
-                                                          return_index=True,
-                                                          return_counts=True)
-    abs_matrix = np.zeros((6, len(regions)))
-    for i in range(len(regions)):
-        region_slice = data_source["p24"][starting_indexes[i]: starting_indexes[i] +
-                                                               regions_counts[i]]
+    regs, reg_ind, reg_counts = np.unique(data_source["region"], return_index=True,
+                                          return_counts=True)
+    abs_matrix = np.zeros((6, len(regs)))
+    for i in range(len(regs)):
+        region_slice = data_source["p24"][reg_ind[i]: reg_ind[i] + reg_counts[i]]
         accidents_values, accidents_counts = np.unique(region_slice, return_counts=True)
         # handle possible invalid values (they would be mapped to -1)
         if accidents_values[0] == -1:
@@ -29,28 +26,28 @@ def plot_stat(data_source, fig_location=None, show_figure=False):
     sums = np.sum(abs_matrix, axis=1)
     rel_matrix = (abs_matrix.T / sums).T * 100
 
-    # plot it
+    # plot results
     ylabels = ["Přerušovaná žlutá", "Semafor mimo provoz", "Dopravní značky",
-        "Přenosné dopravní značky", "Nevyznačena", "Žádná úprava"]
-    fig, (ax1, ax2) = plt.subplots(2,1, figsize=(8.8, 5.8))
+               "Přenosné dopravní značky", "Nevyznačena", "Žádná úprava"]
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8.8, 5.8))
     fig.tight_layout(pad=3)
-    im_abs = ax1.imshow(np.ma.masked_where(abs_matrix == 0, abs_matrix),
-                        cmap="viridis",
-                        norm=LogNorm(vmax=10 ** np.ceil(np.log10(abs_matrix.max())))
-                       )
+    masked = np.ma.masked_where(abs_matrix == 0, abs_matrix)
+    im_abs = ax1.imshow(masked, cmap="viridis",
+                        norm=LogNorm(vmax=10 ** np.ceil(np.log10(abs_matrix.max()))))
     ax1.set_title("Absolutně")
     cbar1 = plt.colorbar(im_abs, ax=ax1, shrink=1.15)
-    ax1.set_xticks(range(len(regions)))
-    ax1.set_xticklabels(regions)
+    ax1.set_xticks(range(len(regs)))
+    ax1.set_xticklabels(regs)
     ax1.set_yticks(range(len(ylabels)))
     ax1.set_yticklabels(ylabels)
     cbar1.set_label("Počet nehod")
 
-    im_rel = ax2.imshow(np.ma.masked_where(rel_matrix == 0, rel_matrix), cmap="plasma")
+    masked = np.ma.masked_where(rel_matrix == 0, rel_matrix)
+    im_rel = ax2.imshow(masked, cmap="plasma", vmin=0, vmax=100)
     ax2.set_title("Relativně vůči příčině")
     cbar2 = plt.colorbar(im_rel, ax=ax2, shrink=1.15)
-    ax2.set_xticks(range(len(regions)))
-    ax2.set_xticklabels(regions)
+    ax2.set_xticks(range(len(regs)))
+    ax2.set_xticklabels(regs)
     ax2.set_yticks(range(len(ylabels)))
     ax2.set_yticklabels(ylabels)
     cbar2.set_label("Podíl nehod pro danou příčinu [%]")
