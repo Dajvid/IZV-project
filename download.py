@@ -228,7 +228,7 @@ class DataDownloader:
         """Method to download latest dataset version."""
         os.makedirs(self.folder, exist_ok=True)
         r = requests.get(self.url)
-        page = BeautifulSoup(r.content, features="lxml")
+        page = BeautifulSoup(r.content, features="html.parser")
         [x.parent.decompose() for x in page.find_all(string="neexistuje")]
         last_buttons = page.select("td:last-of-type button")
         links = [self.url + re.search("'([^']*)'", button.get('onclick'))[1]
