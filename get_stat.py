@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""get_stat.py: Plot statistics about accidents from dataset provided by PČR"""
+
+__author__ = "David Sedlák"
+__email__ = "xsedla1d@stud.fit.vutbr.cz"
+
 import argparse
 import os
 import matplotlib.pyplot as plt

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""download.py: Download and process dataset about car accidents provided by PČR"""
+
+__author__ = "David Sedlák"
+__email__ = "xsedla1d@stud.fit.vutbr.cz"
+
 import csv
 import glob
 import gzip
@@ -216,10 +221,10 @@ class DataDownloader:
         self.folder = os.path.realpath(os.path.relpath(folder))
         self.cache_filename = os.path.join(self.folder, cache_filename)
         self.mem_cache = {}
-        os.makedirs(folder, exist_ok=True)
 
     def download_data(self):
         """Method to download latest dataset version."""
+        os.makedirs(self.folder, exist_ok=True)
         r = requests.get(self.url)
         page = BeautifulSoup(r.content, features="lxml")
         [x.parent.decompose() for x in page.find_all(string="neexistuje")]
@@ -336,5 +341,5 @@ if __name__ == "__main__":
     for hdr, col in example_data.items():
         print(" " * 4 + f"{hdr}, počet položek: {len(col)}")
     print(f"Kraje:")
-    for reg in example_regions:
+    for reg in np.unique(example_data["region"]):
         print(" " * 4 + f"{reg}")
