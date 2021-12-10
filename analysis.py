@@ -125,7 +125,6 @@ def plot_conditions(df: pd.DataFrame, fig_location: str = None,
     if not fig_location and not show_figure:
         return
 
-    df = df[df["p18"] != 0]
     df["p18"] = df["p18"].map({
         1: "neztížené",
         2: "mlha",
@@ -135,7 +134,20 @@ def plot_conditions(df: pd.DataFrame, fig_location: str = None,
         6: "náledí",
         7: "vítr"
     })
-
+    df = df[df["p18"] != 0]
+    displayed_regions = ["PHA", "JHM", "OLK", "ZLK"]
+    displayed_regions = ["JHM", "MSK", "OLK", "ZLK"]
+    df = df[df["region"].isin(displayed_regions)]
+    df["Počet nehod"] = 1
+    df = df[df["date"] < "2021-01-01"]
+    df = pd.pivot_table(df, columns="p18", index=["date", "region"], values="Počet nehod", aggfunc="sum")
+    #print(df.unstack(level=1).resample("M").sum().stack("region"))
+    df = df.unstack(level=1).resample("M").sum().stack("region").swaplevel(0,1)
+    # print(df)
+    df = df.melt(ignore_index=False).reset_index()
+    g = sns.relplot(data=df, kind="line", x="date", y="value", hue="p18", col="region", col_wrap=2) #sharex=false
+    g.set_axis_labels(None, "Počet nehod").set_titles("Kraj: {col_name}")
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -143,6 +155,6 @@ if __name__ == "__main__":
     # skript nebude pri testovani pousten primo, ale budou volany konkreni ¨
     # funkce.
     df = get_dataframe("accidents.pkl.gz", verbose=True) # tento soubor si stahnete sami, při testování pro hodnocení bude existovat
-    #plot_roadtype(df, fig_location="01_roadtype.png", show_figure=True)
-    #plot_animals(df, "02_animals.png", True)
+    # plot_roadtype(df, fig_location="01_roadtype.png", show_figure=True)
+    # plot_animals(df, "02_animals.png", True)
     plot_conditions(df, "03_conditions.png", True)
