@@ -8,8 +8,6 @@ __email__ = "xsedla1d@stud.fit.vutbr.cz"
 from matplotlib import pyplot as plt
 import pandas as pd
 import seaborn as sns
-import pprint
-
 
 def get_dataframe(filename: str, verbose: bool = False) -> pd.DataFrame:
     """Parse dataframe from pickle file.
@@ -37,8 +35,6 @@ def get_dataframe(filename: str, verbose: bool = False) -> pd.DataFrame:
     cat_cols = ["h", "i", "k", "l", "p", "q", "t", "n", "o"]  # n?
     df[cat_cols] = df[cat_cols].astype("category")
     new_size = df.memory_usage(deep=True).sum()
-    pp = pprint.PrettyPrinter(width=41, compact=True)
-    pp.pprint(dict(df.dtypes))
     if verbose:
         mibi = 1024 ** 2
         print(f"orig_size={orig_size / mibi :.1f} MB")
