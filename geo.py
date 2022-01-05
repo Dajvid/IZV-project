@@ -5,6 +5,8 @@
 __author__ = "David Sedlák"
 __email__ = "xsedla1d@stud.fit.vutbr.cz"
 
+import os
+
 import pandas as pd
 import geopandas
 import matplotlib.pyplot as plt
@@ -68,9 +70,11 @@ def plot_geo(gdf: geopandas.GeoDataFrame, fig_location: str = None,
         axes[i][1].axis('off')
         axes[i][1].set_title(f"{region} kraj: silnice první třídy ({year})")
 
-    if fig_location:
-        # todo check existence
-        plt.savefig(fig_location)
+    if fig_location is not None:
+        path = os.path.realpath(os.path.relpath(fig_location))
+        dirname = os.path.dirname(path)
+        os.makedirs(dirname, exist_ok=True)
+        fig.savefig(path)
     if show_figure:
         plt.show()
 
@@ -80,13 +84,39 @@ def plot_cluster(gdf: geopandas.GeoDataFrame, fig_location: str = None,
     """ Vykresleni grafu s lokalitou vsech nehod v kraji shlukovanych do clusteru """
     region = "JHM"
     # filter the region of interets
-    gdf = gdf[gdf["region"] == "JHM"]
+    # TODO remove .copy()
+    gdf = gdf[gdf["region"] == "JHM"].copy()
+    # we want only accidents from first class roads
+    gdf = gdf[gdf["p36"] == 1].copy()
+
+    coords = np.dstack([gdf.geometry.x, gdf.geometry.y]).reshape(-1, 2)
+    db = sklearn.cluster.MiniBatchKMeans(n_clusters=30).fit(coords)
+    gdf["cluster"] = db.labels_
+    gdf["Počet nehod"] = 1
+    gdf = gdf.dissolve(by="cluster", aggfunc={"Počet nehod": "sum"})
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 12))
+    ax.set_aspect("auto")
+    fig.tight_layout()
+    ax.axis('off')
+    plot = gdf.plot(ax=ax, column="Počet nehod", cmap='viridis', legend='True', markersize=1,
+                    legend_kwds={'label': "Počet nehod v úseku", 'location': "bottom", "ax": ax})
+    contextily.add_basemap(ax, crs=gdf.crs.to_string(),
+                       source=contextily.providers.Stamen.TonerLite,
+                       zoom=10, alpha=0.9)
+    ax.set_title(f"Nehody v {region} kraji na silnicích první třídy")
+
+    if fig_location is not None:
+        path = os.path.realpath(os.path.relpath(fig_location))
+        dirname = os.path.dirname(path)
+        os.makedirs(dirname, exist_ok=True)
+        fig.savefig(path)
+    if show_figure:
+        plt.show()
 
 
 if __name__ == "__main__":
     # zde muzete delat libovolne modifikace
     gdf = make_geo(pd.read_pickle("accidents.pkl.gz"))
-    plot_geo(gdf, "geo1.png", True)
-    # plot_cluster(gdf, "geo2.png", True)
+    #plot_geo(gdf, "geo1.png", True)
+    plot_cluster(gdf, "geo2.png", True)
