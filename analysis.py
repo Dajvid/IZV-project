@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+
 def get_dataframe(filename: str, verbose: bool = False) -> pd.DataFrame:
     """Parse dataframe from pickle file.
 
