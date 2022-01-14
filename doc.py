@@ -1,3 +1,10 @@
+#!/usr/bin/python3.8
+# coding=utf-8
+"""doc.py Calculate statistics, plots and tables used in final doc"""
+
+__author__ = "David Sedlák"
+__email__ = "xsedla1d@stud.fit.vutbr.cz"
+
 import os
 
 import pandas as pd
@@ -49,7 +56,7 @@ def plot_alcohol(df: pd.DataFrame, fig_location: str = None,
 
     grouped_alcohol = alcohol_df.groupby(["day"]).agg({"Počet nehod": "sum"})
     grouped_no_alcohol = no_alcohol_df.groupby(["day"]).agg({"Počet nehod": "sum"})
-    # calculate relative ratio of accidents involivng alcohol
+    # calculate relative ratio of accidents involving alcohol
     grouped_alcohol_relative = grouped_alcohol / (grouped_alcohol + grouped_no_alcohol) * 100
 
     # concatenate both dataframes
@@ -75,8 +82,11 @@ def plot_alcohol(df: pd.DataFrame, fig_location: str = None,
                     sharex=True, sharey=False)
     g.set_axis_labels("Dny v týdnu", "Nehody zaviněné pod vlivem alkoholu").set_titles("{col_name}")
 
-    if fig_location:
-        plt.savefig(fig_location)
+    if fig_location is not None:
+        path = os.path.realpath(os.path.relpath(fig_location))
+        dirname = os.path.dirname(path)
+        os.makedirs(dirname, exist_ok=True)
+        plt.savefig(path)
     if show_figure:
         plt.show()
 
@@ -106,7 +116,7 @@ def calculate_alcohol_causalities(df: pd.DataFrame, verbose: bool = False):
                                                                          no_alcohol_causalities)
     if verbose:
         print(f"Absolutní počet obětí v nehodách pod vlivem alkoholu: {absolute_alcohol_causalities}")
-        print(f"Relativní počet obětí v nehodách podvlivem alkoholu: {relative_alcohol_causalities:.2f} %")
+        print(f"Relativní počet obětí v nehodách pod vlivem alkoholu: {relative_alcohol_causalities:.2f} %")
 
     return absolute_alcohol_causalities, relative_alcohol_causalities
 
@@ -150,16 +160,16 @@ def alcohol_vehicle_category(df: pd.DataFrame, verbose: bool = False):
 
     alcohol_mask = df["p11"].isin([1, 3, 5, 6, 7, 8, 9])
     df["Poměr nehod"] = 1
-    df_alchol = df[alcohol_mask].copy()
-    df_noalcohol = df[~alcohol_mask].copy()
+    df_alcohol = df[alcohol_mask].copy()
+    df_no_alcohol = df[~alcohol_mask].copy()
 
-    alcohol_grouped = df_alchol.groupby(["Druh vozidla"]).agg({"Poměr nehod": "sum"})
-    noalcohol_grouped = df_noalcohol.groupby(["Druh vozidla"]).agg({"Poměr nehod": "sum"})
+    alcohol_grouped = df_alcohol.groupby(["Druh vozidla"]).agg({"Poměr nehod": "sum"})
+    no_alcohol_grouped = df_no_alcohol.groupby(["Druh vozidla"]).agg({"Poměr nehod": "sum"})
 
-    result = 100 * alcohol_grouped / (alcohol_grouped + noalcohol_grouped)
+    result = 100 * alcohol_grouped / (alcohol_grouped + no_alcohol_grouped)
     result = result.dropna().sort_values("Poměr nehod", ascending=False)
-    #pd.options.display.float_format = '{:,.2f} %'.format
     if verbose:
+        print("Tabulka relativních počtů nehod pod vlivem alkoholu v jednotlivých kategoriích:")
         print(result.to_latex(na_rep=0, column_format='lc', float_format="{:,.2f} %".format, label="tab:alcohol",
                               caption="Relativní poměr nehod pod vlivem alkoholu u jednotlivých typů vozidla"))
 
@@ -168,6 +178,6 @@ def alcohol_vehicle_category(df: pd.DataFrame, verbose: bool = False):
 
 if __name__ == "__main__":
     dataframe = get_dataframe("accidents.pkl.gz")
-    plot_alcohol(dataframe, "alcohol.pdf", True)
+    plot_alcohol(dataframe, "alcohol.pdf", show_figure=True)
     calculate_alcohol_causalities(dataframe, verbose=True)
     alcohol_vehicle_category(dataframe, verbose=True)
