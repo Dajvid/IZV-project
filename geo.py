@@ -28,7 +28,6 @@ def make_geo(df: pd.DataFrame) -> geopandas.GeoDataFrame:
     # drop records without cords
     df.dropna(subset=["d", "e"], inplace=True)
     df["date"] = df["p2a"].astype("datetime64")
-    # todo drop invalid values in all tasks
     gdf = geopandas.GeoDataFrame(df,
                                  geometry=geopandas.points_from_xy(df["d"], df["e"]),
                                  crs="EPSG:5514")
