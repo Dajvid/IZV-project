@@ -103,11 +103,12 @@ def plot_cluster(gdf: geopandas.GeoDataFrame, fig_location: str = None,
 
     # create clusters
     coords = np.dstack([gdf.geometry.x, gdf.geometry.y]).reshape(-1, 2)
-    # I tried different number of clusters, 20 seemed as working the best way, so I just eyeballed this
-    # parameter. I also tried few different algorithms presented in slides, that use Distances between points
-    # as clustering metric, but they had either por results, or none at all, because I wasn't able to
-    # set the parameters properly. So I just used MiniBatchKMeans, which gave me satisfying results.
-    db = sklearn.cluster.MiniBatchKMeans(n_clusters=20).fit(coords)
+    # I tried different number of (15, 20, 30, 40, 50, 60) clusters, 30 seemed as working the best way,
+    # so I just eyeballed this parameter. I also tried few different algorithms presented in slides,
+    # that use Distances between points as clustering metric, but they had either poor results, or
+    # none at all, because I wasn't able to set the parameters properly. So I just used MiniBatchKMeans,
+    # which gave me satisfying results.
+    db = sklearn.cluster.MiniBatchKMeans(n_clusters=30).fit(coords)
     gdf["cluster"] = db.labels_
     gdf["Počet nehod"] = 1
     gdf = gdf.dissolve(by="cluster", aggfunc={"Počet nehod": "sum"})
