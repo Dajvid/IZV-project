@@ -129,16 +129,83 @@ def generate_highest_alcohol_days_table(df: pd.DataFrame, verbose: bool = False)
     alcohol_mask = df["p11"].isin([1, 3, 5, 6, 7, 8, 9])
     df = df[alcohol_mask].copy()
     df["year"] = df["datum"].dt.year
-    df["Počet nehod"] = 1
 
+    df["Počet nehod"] = 1
     result = df.groupby(["datum"]).agg({"Počet nehod": "sum"}).sort_values("Počet nehod", ascending=False).head(10)
 
-
     print(result.to_latex())
+
+
+def test(df):
+    # drop invalid values
+    df = df.drop(df[df["p45a"] < 0].index)
+
+    alcohol_mask = df["p11"].isin([1, 3, 5, 6, 7, 8, 9])
+    df["Počet nehod"] = 1
+    df_alchol = df[alcohol_mask].copy()
+    df_noalcohol = df[~alcohol_mask].copy()
+
+    alcohol_grouped  = df_alchol.groupby(["p45a"]).agg({"Počet nehod": "sum"})
+    noalcohol_grouped = df_noalcohol.groupby(["p45a"]).agg({"Počet nehod": "sum"})
+
+    result = 100 * alcohol_grouped / (alcohol_grouped + noalcohol_grouped)
+    print(result.sort_values("Počet nehod", ascending=False))
+
+
+def alcohol_vehicle_category(df: pd.DataFrame, verbose: bool = False):
+    """Generate table of vehicle types with they relative number of alcohol accidents
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe
+    verbose : Bool
+        When set to True, print the output to stdout.
+    Returns
+    -------
+    Resulting dataframe.
+    """
+    # drop invalid and unknown values
+    df = df.drop(df[(df["p44"] < 0) | (df["p44"] == 17) | (df["p44"] == 18)].index)
+
+    df["Druh vozidla"] = df["p44"].map({
+        0: "Moped",
+        1: "Malý motocykl",
+        2: "Motocykl",
+        3: "Osobní automobil",
+        4: "Osobní automobil",
+        5: "Nákladní automobil",
+        6: "Nákladní automobil",
+        7: "Nákladní automobil",
+        8: "Autobus",
+        9: "Traktor",
+        10: "Tramvaj",
+        11: "Trolejbus",
+        12: "Jiné motorové",
+        13: "Jízdní kolo",
+        14: "Jiné nemotorové",
+        15: "Jiné nemotorové",
+        16: "Vlak",
+        18: "Jiné"
+    })
+
+    alcohol_mask = df["p11"].isin([1, 3, 5, 6, 7, 8, 9])
+    df["Počet nehod"] = 1
+    df_alchol = df[alcohol_mask].copy()
+    df_noalcohol = df[~alcohol_mask].copy()
+
+    alcohol_grouped = df_alchol.groupby(["Druh vozidla"]).agg({"Počet nehod": "sum"})
+    noalcohol_grouped = df_noalcohol.groupby(["Druh vozidla"]).agg({"Počet nehod": "sum"})
+
+    result = 100 * alcohol_grouped / (alcohol_grouped + noalcohol_grouped)
+    result = result.dropna().sort_values("Počet nehod", ascending=False)
+    pd.options.display.float_format = '{:,.2f} %'.format
+    print(result.to_latex(na_rep=0, column_format='lc'))
 
 
 if __name__ == "__main__":
     dataframe = get_dataframe("accidents.pkl.gz")
     # plot_alcohol(dataframe, "alcohol.pdf", True)
     # calculate_alcohol_causalities(dataframe, verbose=True)
-    generate_highest_alcohol_days_table(dataframe, verbose=True)
+    # generate_highest_alcohol_days_table(dataframe, verbose=True)
+    alcohol_vehicle_category(dataframe)
