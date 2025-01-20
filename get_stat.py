@@ -91,7 +91,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--fig_location",
-        default=None,
+        default="outputs/01_stat.png",
         help="Defines location of resulting plots."
     )
     parser.add_argument(

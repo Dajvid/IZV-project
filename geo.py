@@ -134,5 +134,5 @@ def plot_cluster(gdf: geopandas.GeoDataFrame, fig_location: str = None,
 
 if __name__ == "__main__":
     geodf = make_geo(pd.read_pickle("accidents.pkl.gz"))
-    plot_geo(geodf, "geo1.png", True)
-    plot_cluster(geodf, "geo2.png", True)
+    plot_geo(geodf, "outputs/geo1.png", True)
+    plot_cluster(geodf, "outputs/geo2.png", True)

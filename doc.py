@@ -178,6 +178,6 @@ def alcohol_vehicle_category(df: pd.DataFrame, verbose: bool = False):
 
 if __name__ == "__main__":
     dataframe = get_dataframe("accidents.pkl.gz")
-    plot_alcohol(dataframe, "alcohol.pdf", show_figure=True)
+    plot_alcohol(dataframe, "outputs/alcohol_fig.pdf", show_figure=True)
     calculate_alcohol_causalities(dataframe, verbose=True)
     alcohol_vehicle_category(dataframe, verbose=True)

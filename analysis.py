@@ -184,6 +184,6 @@ def plot_conditions(df: pd.DataFrame, fig_location: str = None,
 
 if __name__ == "__main__":
     dataframe = get_dataframe("accidents.pkl.gz", verbose=True)
-    plot_roadtype(dataframe, fig_location="01_roadtype.png", show_figure=True)
-    plot_animals(dataframe, "02_animals.png", True)
-    plot_conditions(dataframe, "03_conditions.png", True)
+    plot_roadtype(dataframe, fig_location="outputs/01_roadtype.png", show_figure=True)
+    plot_animals(dataframe, "outputs/02_animals.png", True)
+    plot_conditions(dataframe, "outputs/03_conditions.png", True)
